@@ -314,7 +314,7 @@ def train_vrp_gui(var, args):
 
 def optimization(var, cfg):
     from tasks import vrp
-    from tasks.vrp import VehicleRoutingDataset, VehicleRoutingDataset_optimize
+    from tasks.vrp import VehicleRoutingDataset
 
     parser = argparse.ArgumentParser(description='Combinatorial Optimization')
     parser.add_argument('--seed', default=12345, type=int)
