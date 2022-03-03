@@ -299,26 +299,6 @@ class VehicleRoutingDataset_optimize(Dataset):
         return torch.tensor(tensor.data, device=dynamic.device)
 
 
-# def reward(static, tour_indices):
-#     """
-#     Euclidean distance between all cities / nodes given by tour_indices
-#     """
-#
-#     # Convert the indices back into a tour
-#     idx = tour_indices.unsqueeze(1).expand(-1, static.size(1), -1)
-#     tour = torch.gather(static.data, 2, idx).permute(0, 2, 1)
-#
-#     # Ensure we're always returning to the depot - note the extra concat
-#     # won't add any extra loss, as the euclidean distance between consecutive
-#     # points is 0
-#     start = static.data[:, :, 0].unsqueeze(1)
-#     y = torch.cat((start, tour, start), dim=1)
-#
-#     # Euclidean distance between each consecutive point
-#     tour_len = torch.sqrt(torch.sum(torch.pow(y[:, :-1] - y[:, 1:], 2), dim=2))
-#
-#     return tour_len.sum(1)
-
 def reward(static, tour_indices):
     """
     Euclidean distance between all cities / nodes given by tour_indices
@@ -338,55 +318,6 @@ def reward(static, tour_indices):
 
     # Euclidean distance between each consecutive point
     tour_len = torch.sqrt(torch.sum(torch.pow(y[:, :-1] - y[:, 1:], 2), dim=2))
-
-    # 自定义奖励计算
-    # length = 0
-    # start = 0
-    # for loc in tour_indices[0]:
-    #     loc = loc.item()
-    #     if loc == start:
-    #         length += 0
-    #     else:
-    #         length += G[start][loc]['length']
-    #     start = loc
-
-    # 真实路网信息下奖励计算
-    # lengths = torch.FloatTensor([0])
-    # lengths = lengths.to('cuda')
-    # for t in tour_indices:
-    #     length = 0
-    #     start = 0
-    #     for loc in t:
-    #         loc = loc.item()
-    #         if loc == start:
-    #             length += 0
-    #         else:
-    #             length += G[start][loc]['length']
-    #         start = loc
-    #     lengths = torch.cat((lengths, torch.tensor([length], device='cuda')))
-    # lengths = lengths[1:]
-    # return lengths / 1000
-
-    # 任务分配器
-    # tour_loop = []
-    # len_sum = torch.zeros(batch_size, 1, device='cuda')
-    # tour_indices = torch.cat((tour_indices, torch.zeros(batch_size, 1, device='cuda')), dim=1)
-    # for t in range(tour_len[0].size().numel()):
-    #     len_sum += torch.gather(tour_len, 1, torch.ones([batch_size, 1], dtype=torch.int64, device='cuda') * t)
-    #     t_idx = torch.gather(tour_indices, 1, torch.ones([batch_size, 1], dtype=torch.int64, device='cuda') * t)
-    #     temp = torch.tensor(len_sum)
-    #     temp[t_idx != 0] = 0
-    #     tour_loop.append(temp)
-    #     len_sum[t_idx == 0] = 0
-    #
-    # tour_loop = torch.cat(tour_loop, dim=1)
-    # for t in tour_loop:
-    #     t = t.cpu().numpy()
-    #     i = np.argwhere(t == 0)
-    #     t = np.delete(t, i, axis=0)
-    #     solution, stock = mv.greedy_distribution(2, t.tolist())
-    #     print("solution:", solution)
-    #     print("stock:", stock)
 
     return tour_len.sum(1)
 
@@ -442,74 +373,3 @@ def render(static, tour_indices, save_path):
 
     plt.tight_layout()
     plt.savefig(save_path, bbox_inches='tight', dpi=200)
-
-
-'''
-def render(static, tour_indices, save_path):
-    """Plots the found solution."""
-
-    path = 'C:/Users/Matt/Documents/ffmpeg-3.4.2-win64-static/bin/ffmpeg.exe'
-    plt.rcParams['animation.ffmpeg_path'] = path
-
-    plt.close('all')
-
-    num_plots = min(int(np.sqrt(len(tour_indices))), 3)
-    fig, axes = plt.subplots(nrows=num_plots, ncols=num_plots,
-                             sharex='col', sharey='row')
-    axes = [a for ax in axes for a in ax]
-
-    all_lines = []
-    all_tours = []
-    for i, ax in enumerate(axes):
-
-        # Convert the indices back into a tour
-        idx = tour_indices[i]
-        if len(idx.size()) == 1:
-            idx = idx.unsqueeze(0)
-
-        idx = idx.expand(static.size(1), -1)
-        data = torch.gather(static[i].data, 1, idx).cpu().numpy()
-
-        start = static[i, :, 0].cpu().data.numpy()
-        x = np.hstack((start[0], data[0], start[0]))
-        y = np.hstack((start[1], data[1], start[1]))
-
-        cur_tour = np.vstack((x, y))
-
-        all_tours.append(cur_tour)
-        all_lines.append(ax.plot([], [])[0])
-
-        ax.scatter(x, y, s=4, c='r', zorder=2)
-        ax.scatter(x[0], y[0], s=20, c='k', marker='*', zorder=3)
-
-    from matplotlib.animation import FuncAnimation
-
-    tours = all_tours
-
-    def update(idx):
-
-        for i, line in enumerate(all_lines):
-
-            if idx >= tours[i].shape[1]:
-                continue
-
-            data = tours[i][:, idx]
-
-            xy_data = line.get_xydata()
-            xy_data = np.vstack((xy_data, np.atleast_2d(data)))
-
-            line.set_data(xy_data[:, 0], xy_data[:, 1])
-            line.set_linewidth(0.75)
-
-        return all_lines
-
-    anim = FuncAnimation(fig, update, init_func=None,
-                         frames=100, interval=200, blit=False,
-                         repeat=False)
-
-    anim.save('line.mp4', dpi=160)
-    plt.show()
-
-    import sys
-    sys.exit(1)
-'''

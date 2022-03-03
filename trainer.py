@@ -86,39 +86,6 @@ class Critic(nn.Module):
         return output
 
 
-def validate(data_loader, actor, reward_fn, render_fn=None, save_dir='.',
-             num_plot=5):
-    """Used to monitor progress on a validation set & optionally plot solution."""
-
-    actor.eval()
-
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    rewards = []
-    for batch_idx, batch in enumerate(data_loader):
-
-        static, dynamic, x0 = batch
-
-        static = static.to(device)
-        dynamic = dynamic.to(device)
-        x0 = x0.to(device) if len(x0) > 0 else None
-
-        with torch.no_grad():
-            tour_indices, _ = actor.forward(static, dynamic, x0)
-
-        reward = reward_fn(static, tour_indices).mean().item()
-        rewards.append(reward)
-
-        if render_fn is not None and batch_idx < num_plot:
-            name = 'batch%d_%2.4f.png' % (batch_idx, reward)
-            path = os.path.join(save_dir, name)
-            render_fn(static, tour_indices, path)
-
-    actor.train()
-    return np.mean(rewards)
-
-
 def validate_optimize(data_loader, actor, reward_fn, render_fn=None, save_dir='.',
                       num_plot=5):
     """Used to monitor progress on a validation set & optionally plot solution."""
@@ -252,8 +219,8 @@ def train_gui(var, actor, critic, task, num_nodes, train_data, valid_data, rewar
         # Save rendering of validation set tours
         valid_dir = os.path.join(save_dir, '%s' % epoch)
 
-        mean_valid = validate(valid_loader, actor, reward_fn, render_fn,
-                              valid_dir, num_plot=5)
+        mean_valid, _ = validate_optimize(valid_loader, actor, reward_fn, render_fn,
+                                       valid_dir, num_plot=5)
 
         # Save best model parameters
         if mean_valid < best_reward:
@@ -338,7 +305,7 @@ def train_vrp_gui(var, args):
     test_dir = 'test'
     test_loader = DataLoader(test_data, args.batch_size, False, num_workers=0)
 
-    tour_length, tour_index = validate_optimize(test_loader, actor, vrp.reward, vrp.render, test_dir, num_plot=5)
+    tour_length, tour_index = validate_optimize(test_loader, actor, vrp.reward, None, test_dir, num_plot=5)
     var[4].set(tour_length)
     var[5].set(tour_index)
 
